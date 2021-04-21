@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {ModalDismissReasons, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import {NgForm} from '@angular/forms';
+import {FormBuilder, FormGroup, NgForm} from '@angular/forms';
 
 export class Friend {
   constructor(
@@ -24,14 +24,26 @@ export class FriendsComponent implements OnInit {
 
   friends: Friend[];
   closeResult: string;
+  editForm: FormGroup;
+  private deleteId: number;
 
   constructor(
     private httpClient: HttpClient,
-    private modalService: NgbModal
+    private modalService: NgbModal,
+    private formBuilder: FormBuilder
   ) { }
 
   ngOnInit(): void {
     this.getFriends();
+
+    this.editForm = this.formBuilder.group({
+      id: [''],
+      firstname: [''],
+      lastname: [''],
+      department: [''],
+      email: [''],
+      country: [''],
+    });
   }
 
   getFriends() {
@@ -43,7 +55,7 @@ export class FriendsComponent implements OnInit {
   }
 
   open(content) {
-    this.modalService.open(content, {ariaLabelledBy: 'modal-basic-title'}).result.then((result) => {
+    this.modalService.open(content, {ariaLabelledBy: 'new-friend-modal'}).result.then((result) => {
       this.closeResult = `Closed with: ${result}`;
     }, (reason) => {
       this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
@@ -67,6 +79,61 @@ export class FriendsComponent implements OnInit {
       this.ngOnInit();
     });
     this.modalService.dismissAll();
+  }
+
+  openDetails(targetModal, friend: Friend) {
+    this.modalService.open(targetModal, {
+      centered: true,
+      backdrop: 'static',
+      size: 'lg'
+    });
+    document.getElementById('details-firstname').setAttribute('value', friend.firstname);
+    document.getElementById('details-lastname').setAttribute('value', friend.lastname);
+    document.getElementById('details-department').setAttribute('value', friend.department);
+    document.getElementById('details-email').setAttribute('value', friend.email);
+    document.getElementById('details-country').setAttribute('value', friend.country);
+  }
+
+  openEdit(targetModal, friend: Friend) {
+    this.modalService.open(targetModal, {
+      backdrop: 'static',
+      size: 'lg'
+    });
+    this.editForm.patchValue({
+      id: friend.id,
+      firstname: friend.firstname,
+      lastname: friend.lastname,
+      department: friend.department,
+      email: friend.email,
+      country: friend.country
+    });
+  }
+
+  onSave() {
+    const editURL = 'http://localhost:9001/friends/' + this.editForm.value.id + '/edit';
+    console.log(this.editForm.value);
+    this.httpClient.put(editURL, this.editForm.value)
+      .subscribe((results) => {
+        this.ngOnInit();
+        this.modalService.dismissAll();
+      });
+  }
+
+  openDelete(targetModal, friend: Friend) {
+    this.deleteId = friend.id;
+    this.modalService.open(targetModal, {
+      backdrop: 'static',
+      size: 'lg'
+    });
+  }
+
+  onDelete() {
+    const deleteURL = 'http://localhost:9001/friends/' + this.deleteId + '/delete';
+    this.httpClient.delete(deleteURL)
+      .subscribe((results) => {
+        this.ngOnInit();
+        this.modalService.dismissAll();
+      });
   }
 
 }
